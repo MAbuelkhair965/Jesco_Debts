@@ -3,65 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JESKO ERP - النظام السحابي</title>
-    
+    <title>JESKO ERP</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-
     <style>
-        :root { --primary: #007bff; --dark: #121212; --card: #1e1e1e; --text: #e0e0e0; --accent: #ff4d4d; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--dark); color: var(--text); margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: auto; }
-        .header { background: var(--card); padding: 20px; border-radius: 12px; border-bottom: 4px solid var(--primary); text-align: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #2a2a2a; color: white; outline: none; }
-        button { cursor: pointer; background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; transition: 0.3s; }
-        button:hover { opacity: 0.8; }
-        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; }
-        th, td { padding: 15px; text-align: right; border-bottom: 1px solid #333; }
-        th { background: #252525; color: var(--primary); }
-        .total-box { margin-top: 20px; background: var(--card); padding: 20px; border-radius: 12px; font-size: 1.4rem; border-right: 6px solid var(--accent); display: flex; justify-content: space-between; }
-        .btn-pay { background: #28a745; font-size: 0.8rem; padding: 8px 12px; }
-        .btn-del { background: #dc3545; font-size: 0.8rem; padding: 8px 12px; margin-right: 5px; }
-        .history { font-size: 0.8rem; color: #888; list-style: none; padding: 0; margin-top: 5px; }
-        .history li { background: #252525; margin-bottom: 2px; padding: 4px; border-radius: 4px; }
+        body { font-family: sans-serif; background: #121212; color: white; padding: 20px; text-align: center; }
+        .container { max-width: 500px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 10px; }
+        input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #333; padding: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <h1 style="margin:0; color:var(--primary);">JESKO ERP</h1>
-        <p style="margin:5px 0 0; font-size:0.9rem; color:#888;">نظام إدارة الديون السحابي لشركة جهز</p>
-    </div>
-
-    <div class="input-group">
-        <input type="text" id="custName" placeholder="اسم العميل">
-        <input type="number" id="custAmount" placeholder="المبلغ">
-        <button onclick="addEntry()">إضافة</button>
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>العميل</th>
-                <th>المتبقي</th>
-                <th>التاريخ / السجل</th>
-                <th>إجراءات</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody">
-            </tbody>
+    <h2>نظام ديون جيسكو</h2>
+    <input type="text" id="name" placeholder="الاسم">
+    <input type="number" id="amount" placeholder="المبلغ">
+    <button onclick="add()">إضافة</button>
+    <table id="table">
+        <thead><tr><th>الاسم</th><th>المبلغ</th><th>حذف</th></tr></thead>
+        <tbody id="body"></tbody>
     </table>
-
-    <div class="total-box">
-        <span>إجمالي المبالغ المستحقة:</span>
-        <span id="finalTotal">0</span>
-    </div>
 </div>
 
 <script>
-    // 1. إعدادات Firebase الخاصة بك
     const firebaseConfig = {
         apiKey: "AIzaSyADCXCtLlwART44oEK7B36PmCfzE8mTxi0",
         authDomain: "jesko-erp.firebaseapp.com",
@@ -71,82 +38,30 @@
         appId: "1:820083064794:web:2a7f80e53b6ecb94660ae3"
     };
 
-    // 2. تشغيل النظام
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // إعدادات إجبارية لضمان عمل السيرفر في المتصفحات القديمة والموبايل
+    // السطر ده هو اللي بيحل مشكلة الـ Permission Denied في أغلب الأوقات
     db.settings({ experimentalForceLongPolling: true });
 
-    // 3. دالة إضافة عميل جديد
-    function addEntry() {
-        const name = document.getElementById('custName').value;
-        const amount = parseFloat(document.getElementById('custAmount').value);
-
-        if (name && amount > 0) {
-            db.collection("debts").add({
-                name: name,
-                remaining: amount,
-                payments: [],
-                date: new Date()
-            }).then(() => {
-                document.getElementById('custName').value = '';
-                document.getElementById('custAmount').value = '';
-            }).catch(err => alert("حدث خطأ: " + err.message));
-        } else {
-            alert("يرجى إدخال اسم ومبلغ صحيح");
+    function add() {
+        const n = document.getElementById('name').value;
+        const a = parseFloat(document.getElementById('amount').value);
+        if(n && a) {
+            db.collection("debts").add({ name: n, amount: a, date: new Date() });
         }
     }
 
-    // 4. دالة سداد مبلغ
-    function makePayment(id, current) {
-        const val = parseFloat(prompt("أدخل المبلغ المدفوع حالياً:"));
-        if (val && val <= current) {
-            const time = new Date().toLocaleString('ar-EG');
-            db.collection("debts").doc(id).update({
-                remaining: current - val,
-                payments: firebase.firestore.FieldValue.arrayUnion({ amount: val, date: time })
-            });
-        }
-    }
-
-    // 5. دالة حذف عميل
-    function deleteEntry(id) {
-        if (confirm("هل تريد حذف هذا السجل نهائياً؟")) {
-            db.collection("debts").doc(id).delete();
-        }
-    }
-
-    // 6. قراءة البيانات لحظياً (Real-time)
-    db.collection("debts").orderBy("date", "desc").onSnapshot((snapshot) => {
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '';
-        let grandTotal = 0;
-
-        snapshot.forEach((doc) => {
-            const item = doc.data();
-            const id = doc.id;
-            grandTotal += item.remaining;
-
-            let historyHTML = item.payments.map(p => `<li>✔ دفع ${p.amount} في ${p.date}</li>`).join('');
-
-            tbody.innerHTML += `
-                <tr>
-                    <td><strong>${item.name}</strong></td>
-                    <td style="color:#ffc107; font-weight:bold;">${item.remaining} ج.م</td>
-                    <td>
-                        <div style="font-size:0.7rem">${item.date.toDate().toLocaleDateString('ar-EG')}</div>
-                        <ul class="history">${historyHTML}</ul>
-                    </td>
-                    <td>
-                        <button class="btn-pay" onclick="makePayment('${id}', ${item.remaining})">سداد</button>
-                        <button class="btn-del" onclick="deleteEntry('${id}')">حذف</button>
-                    </td>
-                </tr>`;
+    db.collection("debts").orderBy("date", "desc").onSnapshot(snap => {
+        const b = document.getElementById('body');
+        b.innerHTML = '';
+        snap.forEach(doc => {
+            const d = doc.data();
+            b.innerHTML += `<tr><td>${d.name}</td><td>${d.amount}</td><td><button onclick="del('${doc.id}')">X</button></td></tr>`;
         });
-        document.getElementById('finalTotal').innerText = grandTotal.toLocaleString() + " ج.م";
     });
-</script>
 
+    function del(id) { db.collection("debts").doc(id).delete(); }
+</script>
 </body>
 </html>
