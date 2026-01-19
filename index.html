@@ -63,8 +63,13 @@
     };
 
     // بدء تشغيل Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+firebase.initializeApp(firebaseConfig);
+
+// تفعيل قاعدة البيانات (تأكد من وجود السطر ده)
+const db = firebase.firestore(); 
+
+// السطر ده مهم جداً عشان يحل مشكلة الـ Permission في بعض المتصفحات
+db.settings({ experimentalForceLongPolling: true });
 
     // إضافة شخص جديد لقاعدة البيانات
     function addDebt() {
@@ -132,3 +137,4 @@
 </script>
 </body>
 </html>
+
