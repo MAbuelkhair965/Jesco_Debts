@@ -2,97 +2,77 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JESKO ERP - نظام جهز</title>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <style>
-        body { font-family: sans-serif; background: #121212; color: white; padding: 20px; text-align: center; }
-        .container { max-width: 600px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        input { width: 70%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #2a2a2a; color: white; }
-        button { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        table { width: 100%; margin-top: 25px; border-collapse: collapse; }
-        th, td { border-bottom: 1px solid #333; padding: 12px; text-align: center; }
-        th { color: #007bff; }
-        .del-btn { background: #dc3545; padding: 5px 10px; font-size: 0.8rem; }
-    </style>
+    <title>JESKO ERP</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
-<body>
+<body style="background:#1a1a1a; color:white; text-align:center; font-family:sans-serif;">
 
-<div class="container">
-    <h2 style="color: #007bff;">نظام ديون جيسكو</h2>
-    <input type="text" id="name" placeholder="اسم العميل">
-    <input type="number" id="amount" placeholder="المبلغ المطلوب">
-    <button onclick="add()">إضافة للسحابة</button>
+    <h2>نظام مديونيات جيسكو</h2>
     
-    <table id="table">
+    <div style="margin-bottom:20px;">
+        <input type="text" id="N" placeholder="الاسم" style="padding:10px;">
+        <input type="number" id="A" placeholder="المبلغ" style="padding:10px;">
+        <button onclick="saveData()" style="padding:10px 20px; background:blue; color:white; border:none;">حفظ في السحاب</button>
+    </div>
+
+    <table border="1" style="width:100%; border-collapse:collapse;" id="myTable">
         <thead>
-            <tr>
-                <th>الاسم</th>
-                <th>المبلغ</th>
-                <th>إجراء</th>
-            </tr>
+            <tr><th>الاسم</th><th>المبلغ</th><th>حذف</th></tr>
         </thead>
-        <tbody id="body"></tbody>
+        <tbody id="result"></tbody>
     </table>
-</div>
 
-<script>
-    // إعدادات مشروعك (مأخوذة من صورك)
-    const firebaseConfig = {
-        apiKey: "AIzaSyADCXCtLlwART44oEK7B36PmCfzE8mTxi0",
-        authDomain: "jesko-erp.firebaseapp.com",
-        projectId: "jesko-erp",
-        storageBucket: "jesko-erp.firebasestorage.app",
-        messagingSenderId: "820083064794",
-        appId: "1:820083064794:web:2a7f80e53b6ecb94660ae3"
-    };
+    <script>
+        // بياناتك الأصلية
+        const firebaseConfig = {
+            apiKey: "AIzaSyADCXCtLlwART44oEK7B36PmCfzE8mTxi0",
+            authDomain: "jesko-erp.firebaseapp.com",
+            projectId: "jesko-erp",
+            storageBucket: "jesko-erp.firebasestorage.app",
+            messagingSenderId: "820083064794",
+            appId: "1:820083064794:web:2a7f80e53b6ecb94660ae3"
+        };
 
-    // بدء التشغيل
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // حل مشكلة الـ Permission Denied
-    db.settings({ experimentalForceLongPolling: true });
-
-    // دالة الإضافة
-    function add() {
-        const n = document.getElementById('name').value;
-        const a = parseFloat(document.getElementById('amount').value);
-        if(n && a) {
-            db.collection("debts").add({
-                name: n,
-                amount: a,
-                date: firebase.firestore.FieldValue.serverTimestamp() 
-            }).then(() => {
-                document.getElementById('name').value = '';
-                document.getElementById('amount').value = '';
-            }).catch(err => alert("خطأ في الصلاحيات: " + err.message));
+        // تشغيل الخدمة
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
         }
-    }
+        const db = firebase.firestore();
 
-    // عرض البيانات وتحديثها فوراً
-    db.collection("debts").orderBy("date", "desc").onSnapshot(snap => {
-        const b = document.getElementById('body');
-        b.innerHTML = '';
-        snap.forEach(doc => {
-            const d = doc.data();
-            b.innerHTML += `<tr>
-                <td>${d.name}</td>
-                <td style="color:#ffc107">${d.amount} ج.م</td>
-                <td><button class="del-btn" onclick="del('${doc.id}')">حذف</button></td>
-            </tr>`;
+        // دالة الحفظ مع "تنبيه" بالخطأ
+        function saveData() {
+            const name = document.getElementById('N').value;
+            const amount = document.getElementById('A').value;
+
+            if(name && amount) {
+                db.collection("debts").add({
+                    customer: name,
+                    money: parseFloat(amount),
+                    time: firebase.firestore.FieldValue.serverTimestamp()
+                })
+                .then(() => { alert("تم الحفظ بنجاح!"); })
+                .catch((error) => { alert("حصل خطأ: " + error.message); });
+            }
+        }
+
+        // عرض البيانات
+        db.collection("debts").orderBy("time", "desc").onSnapshot((querySnapshot) => {
+            const list = document.getElementById('result');
+            list.innerHTML = "";
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                list.innerHTML += `<tr>
+                    <td>${data.customer}</td>
+                    <td>${data.money}</td>
+                    <td><button onclick="deleteData('${doc.id}')">X</button></td>
+                </tr>`;
+            });
         });
-    }, err => {
-        console.log("Error: ", err.message);
-    });
 
-    // دالة الحذف
-    function del(id) {
-        if(confirm("هل أنت متأكد من الحذف؟")) {
+        function deleteData(id) {
             db.collection("debts").doc(id).delete();
         }
-    }
-</script>
+    </script>
 </body>
 </html>
