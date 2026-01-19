@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة الديون - JESKO ERP</title>
+    <style>
+        :root {
+            --primary: #007bff;
+            --dark: #1a1a1a;
+            --card: #2d2d2d;
+            --text: #ffffff;
+            --accent: #ff4500;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--dark); color: var(--text); padding: 20px; line-height: 1.6; }
+        .container { max-width: 1000px; margin: auto; }
+        .header { background: var(--card); padding: 20px; border-radius: 8px; margin-bottom: 20px; border-bottom: 4px solid var(--primary); }
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        input { padding: 12px; border-radius: 4px; border: 1px solid #444; background: #3d3d3d; color: white; flex: 1; min-width: 150px; }
+        button { cursor: pointer; background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 4px; font-weight: bold; }
+        button.pay-btn { background: #28a745; }
+        button.history-btn { background: #6c757d; margin-right: 5px; }
+        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; }
+        th, td { padding: 15px; text-align: right; border-bottom: 1px solid #444; }
+        th { background-color: #333; color: var(--primary); }
+        .total-box { margin-top: 20px; background: var(--card); padding: 20px; border-radius: 8px; font-size: 1.5rem; border-right: 5px solid var(--accent); }
+        .history-list { font-size: 0.9rem; color: #bbb; margin-top: 5px; list-style: none; padding: 0; }
+        .history-list li { background: #383838; margin: 3px 0; padding: 5px 10px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>JESKO ERP - سجل الديون الذكي</h1>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="nameInput" placeholder="اسم الدائن">
+        <input type="number" id="amountInput" placeholder="المبلغ الكلي">
+        <button onclick="addDebt()">إضافة شخص جديد</button>
+    </div>
+
+    <table id="debtTable">
+        <thead>
+            <tr>
+                <th>الاسم</th>
+                <th>المبلغ الأصلي</th>
+                <th>المتبقي حالياً</th>
+                <th>سجل السداد</th>
+                <th>إجراءات</th>
+            </tr>
+        </thead>
+        <tbody id="debtBody"></tbody>
+    </table>
+
+    <div class="total-box">
+        إجمالي الديون المتبقية: <span id="grandTotal" style="color: var(--accent);">0</span> ج.م
+    </div>
+</div>
+
+<script>
+    let debts = JSON.parse(localStorage.getItem('jesko_debts')) || [];
+
+    function addDebt() {
+        const name = document.getElementById('nameInput').value;
+        const amount = parseFloat(document.getElementById('amountInput').value);
+
+        if (name && amount > 0) {
+            debts.push({
+                id: Date.now(),
+                name: name,
+                originalAmount: amount,
+                remaining: amount,
+                payments: []
+            });
+            saveAndRender();
+            document.getElementById('nameInput').value = '';
+            document.getElementById('amountInput').value = '';
+        }
+    }
+
+    function payAmount(id) {
+        const amountToPay = parseFloat(prompt("أدخل المبلغ الذي تم سداده حالياً:"));
+        if (!amountToPay || amountToPay <= 0) return;
+
+        const debt = debts.find(d => d.id === id);
+        if (amountToPay > debt.remaining) {
+            alert("المبلغ المدفوع أكبر من المتبقي!");
+            return;
+        }
+
+        const date = new Date().toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
+        debt.remaining -= amountToPay;
+        debt.payments.push({ amount: amountToPay, date: date });
+
+        if (debt.remaining === 0) {
+            if (confirm("تم سداد الدين بالكامل. هل تريد حذفه من القائمة؟")) {
+                debts = debts.filter(d => d.id !== id);
+            }
+        }
+        saveAndRender();
+    }
+
+    function saveAndRender() {
+        localStorage.setItem('jesko_debts', JSON.stringify(debts));
+        const tbody = document.getElementById('debtBody');
+        tbody.innerHTML = '';
+        let total = 0;
+
+        debts.forEach(debt => {
+            total += debt.remaining;
+            let paymentsHTML = debt.payments.map(p => `<li>✔ دفع ${p.amount} في ${p.date}</li>`).join('');
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${debt.name}</strong></td>
+                    <td>${debt.originalAmount}</td>
+                    <td style="color: #ffc107; font-weight: bold;">${debt.remaining}</td>
+                    <td><ul class="history-list">${paymentsHTML || 'لا توجد دفعات'}</ul></td>
+                    <td>
+                        <button class="pay-btn" onclick="payAmount(${debt.id})">تسجيل دفعة</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('grandTotal').innerText = total.toLocaleString();
+    }
+
+    saveAndRender();
+</script>
+
+</body>
+</html>
